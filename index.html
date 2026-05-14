@@ -9,13 +9,18 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f0fdf4;
+            padding-bottom: 100px;
         }
         .product-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
         }
         .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        }
+        .product-card.selected {
+            border-color: #059669;
+            background-color: #f0fdf4;
         }
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
@@ -24,6 +29,124 @@
         }
         input[type="number"] {
             -moz-appearance: textfield;
+        }
+        .qty-btn {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s, transform 0.1s;
+            border: 1px solid #6ee7b7;
+            background-color: #ecfdf5;
+            color: #065f46;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .qty-btn:hover {
+            background-color: #d1fae5;
+        }
+        .qty-btn:active {
+            transform: scale(0.93);
+        }
+        .qty-display {
+            width: 46px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            padding: 4px 0;
+            background: white;
+            flex-shrink: 0;
+        }
+        .sticky-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #064e3b;
+            padding: 14px 20px;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        }
+        .sticky-bar .total-label {
+            color: #a7f3d0;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .sticky-bar .total-value {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 800;
+        }
+        .finalize-btn {
+            background-color: #10b981;
+            color: white;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 100px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: background-color 0.2s, transform 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .finalize-btn:hover {
+            background-color: #059669;
+        }
+        .finalize-btn:active {
+            transform: scale(0.97);
+        }
+        .badge {
+            background: rgba(255,255,255,0.2);
+            border-radius: 100px;
+            padding: 1px 8px;
+            font-size: 12px;
+        }
+        .clear-btn {
+            background: none;
+            border: 1px solid rgba(167,243,208,0.4);
+            color: #6ee7b7;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            white-space: nowrap;
+        }
+        .clear-btn:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .validation-msg {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 6px;
+            display: none;
+        }
+        .field-error {
+            border-color: #f87171 !important;
+        }
+        @media (max-width: 480px) {
+            .sticky-bar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .sticky-bar .totals {
+                flex: 1;
+            }
         }
     </style>
 </head>
@@ -41,8 +164,9 @@
             <h2 class="text-2xl font-semibold text-emerald-700 mb-4">Informações do Cliente</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="customerName" class="block text-gray-700 font-medium mb-2">Nome:</label>
+                    <label for="customerName" class="block text-gray-700 font-medium mb-2">Nome: <span class="text-red-500">*</span></label>
                     <input type="text" id="customerName" class="w-full p-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200" placeholder="Seu nome completo">
+                    <p class="validation-msg" id="nameError">Por favor, informe seu nome antes de finalizar.</p>
                 </div>
                 <div>
                     <label for="customerAddress" class="block text-gray-700 font-medium mb-2">Johrei Center:</label>
@@ -53,136 +177,72 @@
 
         <div id="productList" class="space-y-6"></div>
 
+        <!-- Empty cart error -->
+        <p class="validation-msg text-center mt-4" id="cartError" style="font-size:14px;">Adicione pelo menos um produto antes de finalizar.</p>
+
         <div class="mt-10 p-6 bg-emerald-100 rounded-lg border border-emerald-300 shadow-lg flex justify-between items-center">
             <h2 class="text-3xl font-bold text-emerald-800">Total Geral:</h2>
             <span id="grandTotal" class="text-4xl font-extrabold text-emerald-900">R$ 0,00</span>
         </div>
+    </div>
 
-        <div class="mt-8 text-center">
-            <button id="placeOrderBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-emerald-300">
-                Finalizar Pedido
-            </button>
+    <!-- Sticky bottom bar -->
+    <div class="sticky-bar">
+        <div class="totals">
+            <p class="total-label">Total do pedido</p>
+            <p class="total-value" id="stickyTotal">R$ 0,00</p>
         </div>
+        <button class="clear-btn" id="clearAllBtn">Limpar tudo</button>
+        <button class="finalize-btn" id="placeOrderBtn">
+            Finalizar Pedido
+            <span class="badge" id="itemCountBadge" style="display:none;">0</span>
+        </button>
+    </div>
 
-        <div id="orderSummaryModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center hidden z-50">
-            <div class="bg-white rounded-lg p-8 shadow-xl max-w-lg w-full transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
-                <h3 class="text-2xl font-bold text-emerald-800 mb-4">Resumo do Pedido</h3>
-                <p class="text-sm text-gray-600 mb-4">Copie o pedido abaixo e envie para a sua vendedora <b>e no WhatsApp</b>.</p>
-                <div id="summaryDetails" class="mb-6 text-gray-700 whitespace-pre-wrap"></div>
-                <div class="flex justify-end space-x-4">
-                    <button id="closeModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-200">Fechar</button>
-                    <button id="copyOrderBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Copiar Pedido</button>
-                </div>
+    <!-- Order Summary Modal -->
+    <div id="orderSummaryModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-8 shadow-xl max-w-lg w-full transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Resumo do Pedido</h3>
+            <p class="text-sm text-gray-600 mb-4">Copie o pedido abaixo e envie para a sua vendedora <b>e no WhatsApp</b>.</p>
+            <div id="summaryDetails" class="mb-6 text-gray-700 whitespace-pre-wrap text-sm bg-green-50 p-4 rounded-lg border border-green-200 max-h-80 overflow-y-auto"></div>
+            <div class="flex justify-end space-x-4">
+                <button id="closeModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-200">Fechar</button>
+                <button id="copyOrderBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Copiar Pedido</button>
             </div>
         </div>
+    </div>
 
-        <div id="copySuccessMessage" class="fixed bottom-5 right-5 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg hidden z-50">
-            Pedido copiado!
-        </div>
+    <div id="copySuccessMessage" class="fixed bottom-20 right-5 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg hidden z-50">
+        ✓ Pedido copiado!
     </div>
 
     <script>
         const products = [
-          {
-            "name": "COXA NGMO 1KG",
-            "price": 13.5,
-            "category": "Tabela Ação Social"
-          },
-          {
-            "name": "COXINHA ASA NGMO 1KG",
-            "price": 15.10,
-            "category": "Tabela Ação Social"
-          },
-          {
-            "name": "SOBRECOXA NGMO 1KG",
-            "price": 23.85,
-            "category": "Tabela Ação Social"
-          },
-          {
-            "name": "FIGADO NGMO 1KG",
-            "price": 8.60,
-            "category": "Tabela Ação Social"
-          },
-          {
-            "name": "PÉ NGMO 1KG",
-            "price": 8.5,
-            "category": "Tabela Ação Social"
-          },
-          {
-            "name": "OVOS S/TRANSG CAIPIRA VERM GRANDE C/ 20 UN",
-            "price": 25.45,
-            "category": "Tabela Ação Social"
-          },
-          {
-            "name": "CARNE MOIDA DE FRANGO S/TRANSG 400G",
-            "price": 19.92,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "FILE PEITO NGMO 600G",
-            "price": 34.06,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "HAMBURGUER FRANGO NGMO 360G",
-            "price": 27.57,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "ESPETINHO DE FILE DE COXA NGMO TEMP 400G",
-            "price": 18.46,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "MOLHO DE TOMATE DA AGRICULTURA NATURAL MANJERICÃO KORIN 325G",
-            "price": 23.90,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "MOLHO DE TOMATE DA AGRICULTURA NATURAL TRADICIONAL KORIN 325G",
-            "price": 23.90,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "MEL ORG. BISNAGA 300G",
-            "price": 26.90,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "EXTRATO PROPOLIS VERDE ORG 30ML",
-            "price": 24.80,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "SPRAY MEL E PROPOLIS ORG. HORTELA 30ML",
-            "price": 16.30,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "ARROZ AGULHINHA POLIDO ORG 1KG",
-            "price": 23.53,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "ARROZ AGULHINHA INTEGRAL ORG 1KG",
-            "price": 22.49,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "FEIJAO CARIOCA ORG 500G",
-            "price": 16.12,
-            "category": "Tabela Complementar"
-          },
-          {
-            "name": "FEIJAO PRETO ORG 500G",
-            "price": 14.43,
-            "category": "Tabela Complementar"
-          }
+          { "name": "COXA NGMO 1KG", "price": 13.5, "category": "Tabela Ação Social" },
+          { "name": "COXINHA ASA NGMO 1KG", "price": 15.10, "category": "Tabela Ação Social" },
+          { "name": "SOBRECOXA NGMO 1KG", "price": 23.85, "category": "Tabela Ação Social" },
+          { "name": "FIGADO NGMO 1KG", "price": 8.60, "category": "Tabela Ação Social" },
+          { "name": "PÉ NGMO 1KG", "price": 8.5, "category": "Tabela Ação Social" },
+          { "name": "OVOS S/TRANSG CAIPIRA VERM GRANDE C/ 20 UN", "price": 25.45, "category": "Tabela Ação Social" },
+          { "name": "CARNE MOIDA DE FRANGO S/TRANSG 400G", "price": 19.92, "category": "Tabela Complementar" },
+          { "name": "FILE PEITO NGMO 600G", "price": 34.06, "category": "Tabela Complementar" },
+          { "name": "CORACAO DE FRANGO NGMO 600G", "price": 31.50, "category": "Tabela Complementar" },
+          { "name": "HAMBURGUER FRANGO NGMO 360G", "price": 27.80, "category": "Tabela Complementar" },
+          { "name": "ESPETINHO DE FILE DE COXA NGMO TEMP 400G", "price": 18.50, "category": "Tabela Complementar" },
+          { "name": "MEL ORG. BISNAGA 300G", "price": 26.90, "category": "Tabela Complementar" },
+          { "name": "EXTRATO PROPOLIS VERDE ORG 30ML", "price": 24.80, "category": "Tabela Complementar" },
+          { "name": "SPRAY MEL E PROPOLIS ORG. HORTELA 30ML", "price": 16.30, "category": "Tabela Complementar" },
+          { "name": "ARROZ AGULHINHA POLIDO ORG 1KG", "price": 23.53, "category": "Tabela Complementar" },
+          { "name": "ARROZ AGULHINHA INTEGRAL ORG 1KG", "price": 22.49, "category": "Tabela Complementar" },
+          { "name": "FEIJAO CARIOCA ORG 500G", "price": 16.12, "category": "Tabela Complementar" },
+          { "name": "FEIJAO PRETO ORG 500G", "price": 14.43, "category": "Tabela Complementar" }
         ];
 
         const productListDiv = document.getElementById('productList');
         const grandTotalSpan = document.getElementById('grandTotal');
+        const stickyTotal = document.getElementById('stickyTotal');
         const placeOrderBtn = document.getElementById('placeOrderBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
         const orderSummaryModal = document.getElementById('orderSummaryModal');
         const modalContent = document.getElementById('modalContent');
         const summaryDetailsDiv = document.getElementById('summaryDetails');
@@ -191,70 +251,156 @@
         const customerNameInput = document.getElementById('customerName');
         const customerAddressInput = document.getElementById('customerAddress');
         const copySuccessMessage = document.getElementById('copySuccessMessage');
+        const itemCountBadge = document.getElementById('itemCountBadge');
+        const nameError = document.getElementById('nameError');
+        const cartError = document.getElementById('cartError');
 
-        let currentOrder = {};
+        const quantities = {};
 
         function renderProducts() {
             productListDiv.innerHTML = '';
-            const groupedProducts = products.reduce((acc, product) => {
-                const category = product.category || 'Outros Produtos';
-                if (!acc[category]) acc[category] = [];
-                acc[category].push(product);
+            const grouped = products.reduce((acc, product) => {
+                const cat = product.category || 'Outros Produtos';
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(product);
                 return acc;
             }, {});
 
-            for (const category in groupedProducts) {
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'mb-8';
+            for (const category in grouped) {
+                const catDiv = document.createElement('div');
+                catDiv.className = 'mb-8';
 
-                const categoryTitle = document.createElement('h2');
-                categoryTitle.className = 'text-2xl font-semibold text-emerald-700 mb-4 pb-2 border-b-2 border-emerald-300';
-                categoryTitle.textContent = category;
-                categoryDiv.appendChild(categoryTitle);
+                const catTitle = document.createElement('h2');
+                catTitle.className = 'text-2xl font-semibold text-emerald-700 mb-4 pb-2 border-b-2 border-emerald-300';
+                catTitle.textContent = category;
+                catDiv.appendChild(catTitle);
 
-                groupedProducts[category].forEach((product, index) => {
-                    const productId = `product-${product.name.replace(/[^a-zA-Z0-9]/g, '')}-${index}`;
-                    const productCard = document.createElement('div');
-                    productCard.className = 'product-card flex flex-col md:flex-row items-center justify-between bg-white p-4 rounded-lg shadow-md mb-3 border border-green-100';
+                grouped[category].forEach((product, index) => {
+                    const pid = `p_${product.name.replace(/[^a-zA-Z0-9]/g, '_')}_${index}`;
+                    quantities[pid] = 0;
 
-                    productCard.innerHTML = `
-                        <div class="flex-1 mb-2 md:mb-0">
+                    const card = document.createElement('div');
+                    card.className = 'product-card flex flex-col md:flex-row items-center justify-between bg-white p-4 rounded-lg shadow-md mb-3 border border-green-100';
+                    card.id = `card_${pid}`;
+
+                    card.innerHTML = `
+                        <div class="flex-1 mb-3 md:mb-0">
                             <p class="text-lg font-medium text-gray-800">${product.name}</p>
                             <p class="text-emerald-600 font-semibold">R$ ${product.price.toFixed(2).replace('.', ',')}</p>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <input type="number" id="${productId}" 
-                                data-price="${product.price}" 
-                                data-name="${product.name}"
-                                class="quantity-input w-24 p-2 border border-green-300 rounded-md text-center focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200"
-                                value="${currentOrder[productId] || ''}" min="0" step="1" placeholder="Qtd">
-                            <span id="total-${productId}" class="text-lg font-bold text-emerald-700 w-24 text-right">R$ 0,00</span>
+                        <div class="flex items-center gap-2">
+                            <button class="qty-btn" data-pid="${pid}" data-action="minus" aria-label="Diminuir quantidade">−</button>
+                            <span class="qty-display" id="qty_${pid}">0</span>
+                            <button class="qty-btn" data-pid="${pid}" data-action="plus" aria-label="Aumentar quantidade">+</button>
+                            <span class="text-base font-bold text-emerald-700 w-24 text-right" id="total_${pid}">R$ 0,00</span>
                         </div>
                     `;
-                    categoryDiv.appendChild(productCard);
+                    card.dataset.pid = pid;
+                    card.dataset.price = product.price;
+                    card.dataset.name = product.name;
+                    catDiv.appendChild(card);
                 });
-                productListDiv.appendChild(categoryDiv);
+
+                productListDiv.appendChild(catDiv);
             }
 
-            document.querySelectorAll('.quantity-input').forEach(input => {
-                input.addEventListener('input', updateTotals);
+            document.querySelectorAll('.qty-btn').forEach(btn => {
+                btn.addEventListener('click', handleQtyChange);
             });
+        }
+
+        function handleQtyChange(e) {
+            const pid = e.currentTarget.dataset.pid;
+            const action = e.currentTarget.dataset.action;
+            if (action === 'plus') {
+                quantities[pid] = (quantities[pid] || 0) + 1;
+            } else {
+                quantities[pid] = Math.max(0, (quantities[pid] || 0) - 1);
+            }
+            updateCard(pid);
             updateTotals();
+        }
+
+        function updateCard(pid) {
+            const qty = quantities[pid] || 0;
+            const card = document.getElementById(`card_${pid}`);
+            const price = parseFloat(card.dataset.price);
+            const itemTotal = qty * price;
+
+            document.getElementById(`qty_${pid}`).textContent = qty;
+            document.getElementById(`total_${pid}`).textContent = `R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
+
+            if (qty > 0) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
         }
 
         function updateTotals() {
             let grandTotal = 0;
-            document.querySelectorAll('.quantity-input').forEach(input => {
-                const quantity = parseFloat(input.value) || 0;
-                const price = parseFloat(input.dataset.price);
-                const itemTotal = quantity * price;
-                document.getElementById(`total-${input.id}`).textContent = `R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
-                grandTotal += itemTotal;
-                currentOrder[input.id] = quantity;
-            });
+            let totalItems = 0;
 
-            grandTotalSpan.textContent = `R$ ${grandTotal.toFixed(2).replace('.', ',')}`;
+            for (const pid in quantities) {
+                const qty = quantities[pid] || 0;
+                const card = document.getElementById(`card_${pid}`);
+                if (card) {
+                    const price = parseFloat(card.dataset.price);
+                    grandTotal += qty * price;
+                    if (qty > 0) totalItems++;
+                }
+            }
+
+            const formatted = `R$ ${grandTotal.toFixed(2).replace('.', ',')}`;
+            grandTotalSpan.textContent = formatted;
+            stickyTotal.textContent = formatted;
+
+            if (totalItems > 0) {
+                itemCountBadge.style.display = 'inline';
+                itemCountBadge.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'itens'}`;
+            } else {
+                itemCountBadge.style.display = 'none';
+            }
         }
+
+        function clearAll() {
+            for (const pid in quantities) {
+                quantities[pid] = 0;
+                updateCard(pid);
+            }
+            updateTotals();
+        }
+
+        function validateOrder() {
+            let valid = true;
+
+            const name = customerNameInput.value.trim();
+            if (!name) {
+                customerNameInput.classList.add('field-error');
+                nameError.style.display = 'block';
+                valid = false;
+            } else {
+                customerNameInput.classList.remove('field-error');
+                nameError.style.display = 'none';
+            }
+
+            const hasItems = Object.values(quantities).some(q => q > 0);
+            if (!hasItems) {
+                cartError.style.display = 'block';
+                valid = false;
+            } else {
+                cartError.style.display = 'none';
+            }
+
+            return valid;
+        }
+
+        customerNameInput.addEventListener('input', () => {
+            if (customerNameInput.value.trim()) {
+                customerNameInput.classList.remove('field-error');
+                nameError.style.display = 'none';
+            }
+        });
 
         function generateOrderSummary() {
             const customerName = customerNameInput.value.trim();
@@ -266,26 +412,24 @@
             if (customerName || customerAddress) summaryText += '\n';
 
             summaryText += '--- Detalhes do Pedido ---\n';
-            let hasItems = false;
 
-            document.querySelectorAll('.quantity-input').forEach(input => {
-                const quantity = parseFloat(input.value) || 0;
-                if (quantity > 0) {
-                    hasItems = true;
-                    const price = parseFloat(input.dataset.price);
-                    const productName = input.dataset.name || "Produto Desconhecido";
-                    const itemTotal = quantity * price;
-                    summaryText += `${productName} - Qtd: ${quantity} x R$ ${price.toFixed(2).replace('.', ',')} = R$ ${itemTotal.toFixed(2).replace('.', ',')}\n`;
+            for (const pid in quantities) {
+                const qty = quantities[pid] || 0;
+                if (qty > 0) {
+                    const card = document.getElementById(`card_${pid}`);
+                    const price = parseFloat(card.dataset.price);
+                    const name = card.dataset.name;
+                    const itemTotal = qty * price;
+                    summaryText += `${name} — Qtd: ${qty} x R$ ${price.toFixed(2).replace('.', ',')} = R$ ${itemTotal.toFixed(2).replace('.', ',')}\n`;
                 }
-            });
-
-            if (!hasItems) summaryText += 'Nenhum item selecionado.\n';
+            }
 
             summaryText += `\nTotal Geral: ${grandTotalSpan.textContent}\n`;
             return summaryText;
         }
 
         placeOrderBtn.addEventListener('click', () => {
+            if (!validateOrder()) return;
             summaryDetailsDiv.textContent = generateOrderSummary();
             orderSummaryModal.classList.remove('hidden');
             setTimeout(() => {
@@ -297,21 +441,1398 @@
         closeModalBtn.addEventListener('click', () => {
             modalContent.classList.remove('scale-100', 'opacity-100');
             modalContent.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                orderSummaryModal.classList.add('hidden');
-            }, 300);
+            setTimeout(() => orderSummaryModal.classList.add('hidden'), 300);
         });
 
         copyOrderBtn.addEventListener('click', () => {
-            const orderText = summaryDetailsDiv.textContent;
-            navigator.clipboard.writeText(orderText).then(() => {
+            navigator.clipboard.writeText(summaryDetailsDiv.textContent).then(() => {
                 copySuccessMessage.classList.remove('hidden');
-                setTimeout(() => {
-                    copySuccessMessage.classList.add('hidden');
-                }, 2000);
-            }).catch(err => {
-                console.error('Falha ao copiar texto: ', err);
+                setTimeout(() => copySuccessMessage.classList.add('hidden'), 2500);
             });
+        });
+
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('Limpar todas as quantidades?')) clearAll();
+        });
+
+        document.addEventListener('DOMContentLoaded', renderProducts);
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clube de Compras Korin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fdf4;
+            padding-bottom: 100px;
+        }
+        .product-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        }
+        .product-card.selected {
+            border-color: #059669;
+            background-color: #f0fdf4;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .qty-btn {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s, transform 0.1s;
+            border: 1px solid #6ee7b7;
+            background-color: #ecfdf5;
+            color: #065f46;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .qty-btn:hover {
+            background-color: #d1fae5;
+        }
+        .qty-btn:active {
+            transform: scale(0.93);
+        }
+        .qty-display {
+            width: 46px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            padding: 4px 0;
+            background: white;
+            flex-shrink: 0;
+        }
+        .sticky-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #064e3b;
+            padding: 14px 20px;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        }
+        .sticky-bar .total-label {
+            color: #a7f3d0;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .sticky-bar .total-value {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 800;
+        }
+        .finalize-btn {
+            background-color: #10b981;
+            color: white;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 100px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: background-color 0.2s, transform 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .finalize-btn:hover {
+            background-color: #059669;
+        }
+        .finalize-btn:active {
+            transform: scale(0.97);
+        }
+        .badge {
+            background: rgba(255,255,255,0.2);
+            border-radius: 100px;
+            padding: 1px 8px;
+            font-size: 12px;
+        }
+        .clear-btn {
+            background: none;
+            border: 1px solid rgba(167,243,208,0.4);
+            color: #6ee7b7;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            white-space: nowrap;
+        }
+        .clear-btn:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .validation-msg {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 6px;
+            display: none;
+        }
+        .field-error {
+            border-color: #f87171 !important;
+        }
+        @media (max-width: 480px) {
+            .sticky-bar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .sticky-bar .totals {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen flex items-center justify-center py-10">
+    <div class="container mx-auto p-6 bg-white rounded-xl shadow-2xl max-w-4xl border border-green-200">
+        <h1 class="text-4xl font-extrabold text-center text-emerald-800 mb-8">Clube de Compras Korin - 2026</h1>
+        <p class="text-center text-gray-700 mb-8">Preencha as quantidades desejadas e o total será calculado automaticamente!</p>
+
+        <blockquote class="text-center italic text-gray-600 mb-8 p-4 bg-green-50 rounded-lg border border-green-200 shadow-inner">
+            "Respeitando-se e amando-se o solo, sua capacidade natural se manifestará ao máximo. Para tanto, o mais importante é não sujá-lo, mas torná-lo ainda mais puro. Com isso, ele ficará alegre e, logicamente, se tornará mais ativo."
+            <footer class="mt-2 text-sm font-semibold text-emerald-700">— Meishu-Sama, Alicerce do Paraíso, vol. 5</footer>
+        </blockquote>
+
+        <div class="mb-8 p-6 bg-green-50 rounded-lg border border-green-200 shadow-inner">
+            <h2 class="text-2xl font-semibold text-emerald-700 mb-4">Informações do Cliente</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="customerName" class="block text-gray-700 font-medium mb-2">Nome: <span class="text-red-500">*</span></label>
+                    <input type="text" id="customerName" class="w-full p-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200" placeholder="Seu nome completo">
+                    <p class="validation-msg" id="nameError">Por favor, informe seu nome antes de finalizar.</p>
+                </div>
+                <div>
+                    <label for="customerAddress" class="block text-gray-700 font-medium mb-2">Johrei Center:</label>
+                    <input type="text" id="customerAddress" class="w-full p-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200" placeholder="Seu Johrei Center">
+                </div>
+            </div>
+        </div>
+
+        <div id="productList" class="space-y-6"></div>
+
+        <!-- Empty cart error -->
+        <p class="validation-msg text-center mt-4" id="cartError" style="font-size:14px;">Adicione pelo menos um produto antes de finalizar.</p>
+
+        <div class="mt-10 p-6 bg-emerald-100 rounded-lg border border-emerald-300 shadow-lg flex justify-between items-center">
+            <h2 class="text-3xl font-bold text-emerald-800">Total Geral:</h2>
+            <span id="grandTotal" class="text-4xl font-extrabold text-emerald-900">R$ 0,00</span>
+        </div>
+    </div>
+
+    <!-- Sticky bottom bar -->
+    <div class="sticky-bar">
+        <div class="totals">
+            <p class="total-label">Total do pedido</p>
+            <p class="total-value" id="stickyTotal">R$ 0,00</p>
+        </div>
+        <button class="clear-btn" id="clearAllBtn">Limpar tudo</button>
+        <button class="finalize-btn" id="placeOrderBtn">
+            Finalizar Pedido
+            <span class="badge" id="itemCountBadge" style="display:none;">0</span>
+        </button>
+    </div>
+
+    <!-- Order Summary Modal -->
+    <div id="orderSummaryModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-8 shadow-xl max-w-lg w-full transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Resumo do Pedido</h3>
+            <p class="text-sm text-gray-600 mb-4">Copie o pedido abaixo e envie para a sua vendedora <b>e no WhatsApp</b>.</p>
+            <div id="summaryDetails" class="mb-6 text-gray-700 whitespace-pre-wrap text-sm bg-green-50 p-4 rounded-lg border border-green-200 max-h-80 overflow-y-auto"></div>
+            <div class="flex justify-end space-x-4">
+                <button id="closeModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-200">Fechar</button>
+                <button id="copyOrderBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Copiar Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="copySuccessMessage" class="fixed bottom-20 right-5 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg hidden z-50">
+        ✓ Pedido copiado!
+    </div>
+
+    <script>
+        const products = [
+          { "name": "COXA NGMO 1KG", "price": 13.5, "category": "Tabela Ação Social" },
+          { "name": "COXINHA ASA NGMO 1KG", "price": 15.10, "category": "Tabela Ação Social" },
+          { "name": "SOBRECOXA NGMO 1KG", "price": 23.85, "category": "Tabela Ação Social" },
+          { "name": "FIGADO NGMO 1KG", "price": 8.60, "category": "Tabela Ação Social" },
+          { "name": "PÉ NGMO 1KG", "price": 8.5, "category": "Tabela Ação Social" },
+          { "name": "OVOS S/TRANSG CAIPIRA VERM GRANDE C/ 20 UN", "price": 25.45, "category": "Tabela Ação Social" },
+          { "name": "CARNE MOIDA DE FRANGO S/TRANSG 400G", "price": 19.92, "category": "Tabela Complementar" },
+          { "name": "FILE PEITO NGMO 600G", "price": 34.06, "category": "Tabela Complementar" },
+          { "name": "CORACAO DE FRANGO NGMO 600G", "price": 31.50, "category": "Tabela Complementar" },
+          { "name": "HAMBURGUER FRANGO NGMO 360G", "price": 27.80, "category": "Tabela Complementar" },
+          { "name": "ESPETINHO DE FILE DE COXA NGMO TEMP 400G", "price": 18.50, "category": "Tabela Complementar" },
+          { "name": "MEL ORG. BISNAGA 300G", "price": 26.90, "category": "Tabela Complementar" },
+          { "name": "EXTRATO PROPOLIS VERDE ORG 30ML", "price": 24.80, "category": "Tabela Complementar" },
+          { "name": "SPRAY MEL E PROPOLIS ORG. HORTELA 30ML", "price": 16.30, "category": "Tabela Complementar" },
+          { "name": "ARROZ AGULHINHA POLIDO ORG 1KG", "price": 23.53, "category": "Tabela Complementar" },
+          { "name": "ARROZ AGULHINHA INTEGRAL ORG 1KG", "price": 22.49, "category": "Tabela Complementar" },
+          { "name": "FEIJAO CARIOCA ORG 500G", "price": 16.12, "category": "Tabela Complementar" },
+          { "name": "FEIJAO PRETO ORG 500G", "price": 14.43, "category": "Tabela Complementar" }
+        ];
+
+        const productListDiv = document.getElementById('productList');
+        const grandTotalSpan = document.getElementById('grandTotal');
+        const stickyTotal = document.getElementById('stickyTotal');
+        const placeOrderBtn = document.getElementById('placeOrderBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const orderSummaryModal = document.getElementById('orderSummaryModal');
+        const modalContent = document.getElementById('modalContent');
+        const summaryDetailsDiv = document.getElementById('summaryDetails');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const copyOrderBtn = document.getElementById('copyOrderBtn');
+        const customerNameInput = document.getElementById('customerName');
+        const customerAddressInput = document.getElementById('customerAddress');
+        const copySuccessMessage = document.getElementById('copySuccessMessage');
+        const itemCountBadge = document.getElementById('itemCountBadge');
+        const nameError = document.getElementById('nameError');
+        const cartError = document.getElementById('cartError');
+
+        const quantities = {};
+
+        function renderProducts() {
+            productListDiv.innerHTML = '';
+            const grouped = products.reduce((acc, product) => {
+                const cat = product.category || 'Outros Produtos';
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(product);
+                return acc;
+            }, {});
+
+            for (const category in grouped) {
+                const catDiv = document.createElement('div');
+                catDiv.className = 'mb-8';
+
+                const catTitle = document.createElement('h2');
+                catTitle.className = 'text-2xl font-semibold text-emerald-700 mb-4 pb-2 border-b-2 border-emerald-300';
+                catTitle.textContent = category;
+                catDiv.appendChild(catTitle);
+
+                grouped[category].forEach((product, index) => {
+                    const pid = `p_${product.name.replace(/[^a-zA-Z0-9]/g, '_')}_${index}`;
+                    quantities[pid] = 0;
+
+                    const card = document.createElement('div');
+                    card.className = 'product-card flex flex-col md:flex-row items-center justify-between bg-white p-4 rounded-lg shadow-md mb-3 border border-green-100';
+                    card.id = `card_${pid}`;
+
+                    card.innerHTML = `
+                        <div class="flex-1 mb-3 md:mb-0">
+                            <p class="text-lg font-medium text-gray-800">${product.name}</p>
+                            <p class="text-emerald-600 font-semibold">R$ ${product.price.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="qty-btn" data-pid="${pid}" data-action="minus" aria-label="Diminuir quantidade">−</button>
+                            <span class="qty-display" id="qty_${pid}">0</span>
+                            <button class="qty-btn" data-pid="${pid}" data-action="plus" aria-label="Aumentar quantidade">+</button>
+                            <span class="text-base font-bold text-emerald-700 w-24 text-right" id="total_${pid}">R$ 0,00</span>
+                        </div>
+                    `;
+                    card.dataset.pid = pid;
+                    card.dataset.price = product.price;
+                    card.dataset.name = product.name;
+                    catDiv.appendChild(card);
+                });
+
+                productListDiv.appendChild(catDiv);
+            }
+
+            document.querySelectorAll('.qty-btn').forEach(btn => {
+                btn.addEventListener('click', handleQtyChange);
+            });
+        }
+
+        function handleQtyChange(e) {
+            const pid = e.currentTarget.dataset.pid;
+            const action = e.currentTarget.dataset.action;
+            if (action === 'plus') {
+                quantities[pid] = (quantities[pid] || 0) + 1;
+            } else {
+                quantities[pid] = Math.max(0, (quantities[pid] || 0) - 1);
+            }
+            updateCard(pid);
+            updateTotals();
+        }
+
+        function updateCard(pid) {
+            const qty = quantities[pid] || 0;
+            const card = document.getElementById(`card_${pid}`);
+            const price = parseFloat(card.dataset.price);
+            const itemTotal = qty * price;
+
+            document.getElementById(`qty_${pid}`).textContent = qty;
+            document.getElementById(`total_${pid}`).textContent = `R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
+
+            if (qty > 0) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        }
+
+        function updateTotals() {
+            let grandTotal = 0;
+            let totalItems = 0;
+
+            for (const pid in quantities) {
+                const qty = quantities[pid] || 0;
+                const card = document.getElementById(`card_${pid}`);
+                if (card) {
+                    const price = parseFloat(card.dataset.price);
+                    grandTotal += qty * price;
+                    if (qty > 0) totalItems++;
+                }
+            }
+
+            const formatted = `R$ ${grandTotal.toFixed(2).replace('.', ',')}`;
+            grandTotalSpan.textContent = formatted;
+            stickyTotal.textContent = formatted;
+
+            if (totalItems > 0) {
+                itemCountBadge.style.display = 'inline';
+                itemCountBadge.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'itens'}`;
+            } else {
+                itemCountBadge.style.display = 'none';
+            }
+        }
+
+        function clearAll() {
+            for (const pid in quantities) {
+                quantities[pid] = 0;
+                updateCard(pid);
+            }
+            updateTotals();
+        }
+
+        function validateOrder() {
+            let valid = true;
+
+            const name = customerNameInput.value.trim();
+            if (!name) {
+                customerNameInput.classList.add('field-error');
+                nameError.style.display = 'block';
+                valid = false;
+            } else {
+                customerNameInput.classList.remove('field-error');
+                nameError.style.display = 'none';
+            }
+
+            const hasItems = Object.values(quantities).some(q => q > 0);
+            if (!hasItems) {
+                cartError.style.display = 'block';
+                valid = false;
+            } else {
+                cartError.style.display = 'none';
+            }
+
+            return valid;
+        }
+
+        customerNameInput.addEventListener('input', () => {
+            if (customerNameInput.value.trim()) {
+                customerNameInput.classList.remove('field-error');
+                nameError.style.display = 'none';
+            }
+        });
+
+        function generateOrderSummary() {
+            const customerName = customerNameInput.value.trim();
+            const customerAddress = customerAddressInput.value.trim();
+            let summaryText = '';
+
+            if (customerName) summaryText += `Nome: ${customerName}\n`;
+            if (customerAddress) summaryText += `Johrei Center: ${customerAddress}\n`;
+            if (customerName || customerAddress) summaryText += '\n';
+
+            summaryText += '--- Detalhes do Pedido ---\n';
+
+            for (const pid in quantities) {
+                const qty = quantities[pid] || 0;
+                if (qty > 0) {
+                    const card = document.getElementById(`card_${pid}`);
+                    const price = parseFloat(card.dataset.price);
+                    const name = card.dataset.name;
+                    const itemTotal = qty * price;
+                    summaryText += `${name} — Qtd: ${qty} x R$ ${price.toFixed(2).replace('.', ',')} = R$ ${itemTotal.toFixed(2).replace('.', ',')}\n`;
+                }
+            }
+
+            summaryText += `\nTotal Geral: ${grandTotalSpan.textContent}\n`;
+            return summaryText;
+        }
+
+        placeOrderBtn.addEventListener('click', () => {
+            if (!validateOrder()) return;
+            summaryDetailsDiv.textContent = generateOrderSummary();
+            orderSummaryModal.classList.remove('hidden');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => orderSummaryModal.classList.add('hidden'), 300);
+        });
+
+        copyOrderBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(summaryDetailsDiv.textContent).then(() => {
+                copySuccessMessage.classList.remove('hidden');
+                setTimeout(() => copySuccessMessage.classList.add('hidden'), 2500);
+            });
+        });
+
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('Limpar todas as quantidades?')) clearAll();
+        });
+
+        document.addEventListener('DOMContentLoaded', renderProducts);
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clube de Compras Korin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fdf4;
+            padding-bottom: 100px;
+        }
+        .product-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        }
+        .product-card.selected {
+            border-color: #059669;
+            background-color: #f0fdf4;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .qty-btn {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s, transform 0.1s;
+            border: 1px solid #6ee7b7;
+            background-color: #ecfdf5;
+            color: #065f46;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .qty-btn:hover {
+            background-color: #d1fae5;
+        }
+        .qty-btn:active {
+            transform: scale(0.93);
+        }
+        .qty-display {
+            width: 46px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            padding: 4px 0;
+            background: white;
+            flex-shrink: 0;
+        }
+        .sticky-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #064e3b;
+            padding: 14px 20px;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        }
+        .sticky-bar .total-label {
+            color: #a7f3d0;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .sticky-bar .total-value {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 800;
+        }
+        .finalize-btn {
+            background-color: #10b981;
+            color: white;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 100px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: background-color 0.2s, transform 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .finalize-btn:hover {
+            background-color: #059669;
+        }
+        .finalize-btn:active {
+            transform: scale(0.97);
+        }
+        .badge {
+            background: rgba(255,255,255,0.2);
+            border-radius: 100px;
+            padding: 1px 8px;
+            font-size: 12px;
+        }
+        .clear-btn {
+            background: none;
+            border: 1px solid rgba(167,243,208,0.4);
+            color: #6ee7b7;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            white-space: nowrap;
+        }
+        .clear-btn:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .validation-msg {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 6px;
+            display: none;
+        }
+        .field-error {
+            border-color: #f87171 !important;
+        }
+        @media (max-width: 480px) {
+            .sticky-bar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .sticky-bar .totals {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen flex items-center justify-center py-10">
+    <div class="container mx-auto p-6 bg-white rounded-xl shadow-2xl max-w-4xl border border-green-200">
+        <h1 class="text-4xl font-extrabold text-center text-emerald-800 mb-8">Clube de Compras Korin - 2026</h1>
+        <p class="text-center text-gray-700 mb-8">Preencha as quantidades desejadas e o total será calculado automaticamente!</p>
+
+        <blockquote class="text-center italic text-gray-600 mb-8 p-4 bg-green-50 rounded-lg border border-green-200 shadow-inner">
+            "Respeitando-se e amando-se o solo, sua capacidade natural se manifestará ao máximo. Para tanto, o mais importante é não sujá-lo, mas torná-lo ainda mais puro. Com isso, ele ficará alegre e, logicamente, se tornará mais ativo."
+            <footer class="mt-2 text-sm font-semibold text-emerald-700">— Meishu-Sama, Alicerce do Paraíso, vol. 5</footer>
+        </blockquote>
+
+        <div class="mb-8 p-6 bg-green-50 rounded-lg border border-green-200 shadow-inner">
+            <h2 class="text-2xl font-semibold text-emerald-700 mb-4">Informações do Cliente</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="customerName" class="block text-gray-700 font-medium mb-2">Nome: <span class="text-red-500">*</span></label>
+                    <input type="text" id="customerName" class="w-full p-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200" placeholder="Seu nome completo">
+                    <p class="validation-msg" id="nameError">Por favor, informe seu nome antes de finalizar.</p>
+                </div>
+                <div>
+                    <label for="customerAddress" class="block text-gray-700 font-medium mb-2">Johrei Center:</label>
+                    <input type="text" id="customerAddress" class="w-full p-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200" placeholder="Seu Johrei Center">
+                </div>
+            </div>
+        </div>
+
+        <div id="productList" class="space-y-6"></div>
+
+        <!-- Empty cart error -->
+        <p class="validation-msg text-center mt-4" id="cartError" style="font-size:14px;">Adicione pelo menos um produto antes de finalizar.</p>
+
+        <div class="mt-10 p-6 bg-emerald-100 rounded-lg border border-emerald-300 shadow-lg flex justify-between items-center">
+            <h2 class="text-3xl font-bold text-emerald-800">Total Geral:</h2>
+            <span id="grandTotal" class="text-4xl font-extrabold text-emerald-900">R$ 0,00</span>
+        </div>
+    </div>
+
+    <!-- Sticky bottom bar -->
+    <div class="sticky-bar">
+        <div class="totals">
+            <p class="total-label">Total do pedido</p>
+            <p class="total-value" id="stickyTotal">R$ 0,00</p>
+        </div>
+        <button class="clear-btn" id="clearAllBtn">Limpar tudo</button>
+        <button class="finalize-btn" id="placeOrderBtn">
+            Finalizar Pedido
+            <span class="badge" id="itemCountBadge" style="display:none;">0</span>
+        </button>
+    </div>
+
+    <!-- Order Summary Modal -->
+    <div id="orderSummaryModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-8 shadow-xl max-w-lg w-full transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Resumo do Pedido</h3>
+            <p class="text-sm text-gray-600 mb-4">Copie o pedido abaixo e envie para a sua vendedora <b>e no WhatsApp</b>.</p>
+            <div id="summaryDetails" class="mb-6 text-gray-700 whitespace-pre-wrap text-sm bg-green-50 p-4 rounded-lg border border-green-200 max-h-80 overflow-y-auto"></div>
+            <div class="flex justify-end space-x-4">
+                <button id="closeModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-200">Fechar</button>
+                <button id="copyOrderBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Copiar Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="copySuccessMessage" class="fixed bottom-20 right-5 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg hidden z-50">
+        ✓ Pedido copiado!
+    </div>
+
+    <script>
+        const products = [
+          { "name": "COXA NGMO 1KG", "price": 13.5, "category": "Tabela Ação Social" },
+          { "name": "COXINHA ASA NGMO 1KG", "price": 15.10, "category": "Tabela Ação Social" },
+          { "name": "SOBRECOXA NGMO 1KG", "price": 23.85, "category": "Tabela Ação Social" },
+          { "name": "FIGADO NGMO 1KG", "price": 8.60, "category": "Tabela Ação Social" },
+          { "name": "PÉ NGMO 1KG", "price": 8.5, "category": "Tabela Ação Social" },
+          { "name": "OVOS S/TRANSG CAIPIRA VERM GRANDE C/ 20 UN", "price": 25.45, "category": "Tabela Ação Social" },
+          { "name": "CARNE MOIDA DE FRANGO S/TRANSG 400G", "price": 19.92, "category": "Tabela Complementar" },
+          { "name": "FILE PEITO NGMO 600G", "price": 34.06, "category": "Tabela Complementar" },
+          { "name": "CORACAO DE FRANGO NGMO 600G", "price": 31.50, "category": "Tabela Complementar" },
+          { "name": "HAMBURGUER FRANGO NGMO 360G", "price": 27.80, "category": "Tabela Complementar" },
+          { "name": "ESPETINHO DE FILE DE COXA NGMO TEMP 400G", "price": 18.50, "category": "Tabela Complementar" },
+          { "name": "MEL ORG. BISNAGA 300G", "price": 26.90, "category": "Tabela Complementar" },
+          { "name": "EXTRATO PROPOLIS VERDE ORG 30ML", "price": 24.80, "category": "Tabela Complementar" },
+          { "name": "SPRAY MEL E PROPOLIS ORG. HORTELA 30ML", "price": 16.30, "category": "Tabela Complementar" },
+          { "name": "ARROZ AGULHINHA POLIDO ORG 1KG", "price": 23.53, "category": "Tabela Complementar" },
+          { "name": "ARROZ AGULHINHA INTEGRAL ORG 1KG", "price": 22.49, "category": "Tabela Complementar" },
+          { "name": "FEIJAO CARIOCA ORG 500G", "price": 16.12, "category": "Tabela Complementar" },
+          { "name": "FEIJAO PRETO ORG 500G", "price": 14.43, "category": "Tabela Complementar" }
+        ];
+
+        const productListDiv = document.getElementById('productList');
+        const grandTotalSpan = document.getElementById('grandTotal');
+        const stickyTotal = document.getElementById('stickyTotal');
+        const placeOrderBtn = document.getElementById('placeOrderBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const orderSummaryModal = document.getElementById('orderSummaryModal');
+        const modalContent = document.getElementById('modalContent');
+        const summaryDetailsDiv = document.getElementById('summaryDetails');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const copyOrderBtn = document.getElementById('copyOrderBtn');
+        const customerNameInput = document.getElementById('customerName');
+        const customerAddressInput = document.getElementById('customerAddress');
+        const copySuccessMessage = document.getElementById('copySuccessMessage');
+        const itemCountBadge = document.getElementById('itemCountBadge');
+        const nameError = document.getElementById('nameError');
+        const cartError = document.getElementById('cartError');
+
+        const quantities = {};
+
+        function renderProducts() {
+            productListDiv.innerHTML = '';
+            const grouped = products.reduce((acc, product) => {
+                const cat = product.category || 'Outros Produtos';
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(product);
+                return acc;
+            }, {});
+
+            for (const category in grouped) {
+                const catDiv = document.createElement('div');
+                catDiv.className = 'mb-8';
+
+                const catTitle = document.createElement('h2');
+                catTitle.className = 'text-2xl font-semibold text-emerald-700 mb-4 pb-2 border-b-2 border-emerald-300';
+                catTitle.textContent = category;
+                catDiv.appendChild(catTitle);
+
+                grouped[category].forEach((product, index) => {
+                    const pid = `p_${product.name.replace(/[^a-zA-Z0-9]/g, '_')}_${index}`;
+                    quantities[pid] = 0;
+
+                    const card = document.createElement('div');
+                    card.className = 'product-card flex flex-col md:flex-row items-center justify-between bg-white p-4 rounded-lg shadow-md mb-3 border border-green-100';
+                    card.id = `card_${pid}`;
+
+                    card.innerHTML = `
+                        <div class="flex-1 mb-3 md:mb-0">
+                            <p class="text-lg font-medium text-gray-800">${product.name}</p>
+                            <p class="text-emerald-600 font-semibold">R$ ${product.price.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="qty-btn" data-pid="${pid}" data-action="minus" aria-label="Diminuir quantidade">−</button>
+                            <span class="qty-display" id="qty_${pid}">0</span>
+                            <button class="qty-btn" data-pid="${pid}" data-action="plus" aria-label="Aumentar quantidade">+</button>
+                            <span class="text-base font-bold text-emerald-700 w-24 text-right" id="total_${pid}">R$ 0,00</span>
+                        </div>
+                    `;
+                    card.dataset.pid = pid;
+                    card.dataset.price = product.price;
+                    card.dataset.name = product.name;
+                    catDiv.appendChild(card);
+                });
+
+                productListDiv.appendChild(catDiv);
+            }
+
+            document.querySelectorAll('.qty-btn').forEach(btn => {
+                btn.addEventListener('click', handleQtyChange);
+            });
+        }
+
+        function handleQtyChange(e) {
+            const pid = e.currentTarget.dataset.pid;
+            const action = e.currentTarget.dataset.action;
+            if (action === 'plus') {
+                quantities[pid] = (quantities[pid] || 0) + 1;
+            } else {
+                quantities[pid] = Math.max(0, (quantities[pid] || 0) - 1);
+            }
+            updateCard(pid);
+            updateTotals();
+        }
+
+        function updateCard(pid) {
+            const qty = quantities[pid] || 0;
+            const card = document.getElementById(`card_${pid}`);
+            const price = parseFloat(card.dataset.price);
+            const itemTotal = qty * price;
+
+            document.getElementById(`qty_${pid}`).textContent = qty;
+            document.getElementById(`total_${pid}`).textContent = `R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
+
+            if (qty > 0) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        }
+
+        function updateTotals() {
+            let grandTotal = 0;
+            let totalItems = 0;
+
+            for (const pid in quantities) {
+                const qty = quantities[pid] || 0;
+                const card = document.getElementById(`card_${pid}`);
+                if (card) {
+                    const price = parseFloat(card.dataset.price);
+                    grandTotal += qty * price;
+                    if (qty > 0) totalItems++;
+                }
+            }
+
+            const formatted = `R$ ${grandTotal.toFixed(2).replace('.', ',')}`;
+            grandTotalSpan.textContent = formatted;
+            stickyTotal.textContent = formatted;
+
+            if (totalItems > 0) {
+                itemCountBadge.style.display = 'inline';
+                itemCountBadge.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'itens'}`;
+            } else {
+                itemCountBadge.style.display = 'none';
+            }
+        }
+
+        function clearAll() {
+            for (const pid in quantities) {
+                quantities[pid] = 0;
+                updateCard(pid);
+            }
+            updateTotals();
+        }
+
+        function validateOrder() {
+            let valid = true;
+
+            const name = customerNameInput.value.trim();
+            if (!name) {
+                customerNameInput.classList.add('field-error');
+                nameError.style.display = 'block';
+                valid = false;
+            } else {
+                customerNameInput.classList.remove('field-error');
+                nameError.style.display = 'none';
+            }
+
+            const hasItems = Object.values(quantities).some(q => q > 0);
+            if (!hasItems) {
+                cartError.style.display = 'block';
+                valid = false;
+            } else {
+                cartError.style.display = 'none';
+            }
+
+            return valid;
+        }
+
+        customerNameInput.addEventListener('input', () => {
+            if (customerNameInput.value.trim()) {
+                customerNameInput.classList.remove('field-error');
+                nameError.style.display = 'none';
+            }
+        });
+
+        function generateOrderSummary() {
+            const customerName = customerNameInput.value.trim();
+            const customerAddress = customerAddressInput.value.trim();
+            let summaryText = '';
+
+            if (customerName) summaryText += `Nome: ${customerName}\n`;
+            if (customerAddress) summaryText += `Johrei Center: ${customerAddress}\n`;
+            if (customerName || customerAddress) summaryText += '\n';
+
+            summaryText += '--- Detalhes do Pedido ---\n';
+
+            for (const pid in quantities) {
+                const qty = quantities[pid] || 0;
+                if (qty > 0) {
+                    const card = document.getElementById(`card_${pid}`);
+                    const price = parseFloat(card.dataset.price);
+                    const name = card.dataset.name;
+                    const itemTotal = qty * price;
+                    summaryText += `${name} — Qtd: ${qty} x R$ ${price.toFixed(2).replace('.', ',')} = R$ ${itemTotal.toFixed(2).replace('.', ',')}\n`;
+                }
+            }
+
+            summaryText += `\nTotal Geral: ${grandTotalSpan.textContent}\n`;
+            return summaryText;
+        }
+
+        placeOrderBtn.addEventListener('click', () => {
+            if (!validateOrder()) return;
+            summaryDetailsDiv.textContent = generateOrderSummary();
+            orderSummaryModal.classList.remove('hidden');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => orderSummaryModal.classList.add('hidden'), 300);
+        });
+
+        copyOrderBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(summaryDetailsDiv.textContent).then(() => {
+                copySuccessMessage.classList.remove('hidden');
+                setTimeout(() => copySuccessMessage.classList.add('hidden'), 2500);
+            });
+        });
+
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('Limpar todas as quantidades?')) clearAll();
+        });
+
+        document.addEventListener('DOMContentLoaded', renderProducts);
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clube de Compras Korin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fdf4;
+            padding-bottom: 100px;
+        }
+        .product-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        }
+        .product-card.selected {
+            border-color: #059669;
+            background-color: #f0fdf4;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .qty-btn {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s, transform 0.1s;
+            border: 1px solid #6ee7b7;
+            background-color: #ecfdf5;
+            color: #065f46;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .qty-btn:hover {
+            background-color: #d1fae5;
+        }
+        .qty-btn:active {
+            transform: scale(0.93);
+        }
+        .qty-display {
+            width: 46px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            padding: 4px 0;
+            background: white;
+            flex-shrink: 0;
+        }
+        .sticky-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #064e3b;
+            padding: 14px 20px;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        }
+        .sticky-bar .total-label {
+            color: #a7f3d0;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .sticky-bar .total-value {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 800;
+        }
+        .finalize-btn {
+            background-color: #10b981;
+            color: white;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 100px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: background-color 0.2s, transform 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .finalize-btn:hover {
+            background-color: #059669;
+        }
+        .finalize-btn:active {
+            transform: scale(0.97);
+        }
+        .badge {
+            background: rgba(255,255,255,0.2);
+            border-radius: 100px;
+            padding: 1px 8px;
+            font-size: 12px;
+        }
+        .clear-btn {
+            background: none;
+            border: 1px solid rgba(167,243,208,0.4);
+            color: #6ee7b7;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            white-space: nowrap;
+        }
+        .clear-btn:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .validation-msg {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 6px;
+            display: none;
+        }
+        .field-error {
+            border-color: #f87171 !important;
+        }
+        @media (max-width: 480px) {
+            .sticky-bar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .sticky-bar .totals {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen flex items-center justify-center py-10">
+    <div class="container mx-auto p-6 bg-white rounded-xl shadow-2xl max-w-4xl border border-green-200">
+        <h1 class="text-4xl font-extrabold text-center text-emerald-800 mb-8">Clube de Compras Korin - 2026</h1>
+        <p class="text-center text-gray-700 mb-8">Preencha as quantidades desejadas e o total será calculado automaticamente!</p>
+
+        <blockquote class="text-center italic text-gray-600 mb-8 p-4 bg-green-50 rounded-lg border border-green-200 shadow-inner">
+            "Respeitando-se e amando-se o solo, sua capacidade natural se manifestará ao máximo. Para tanto, o mais importante é não sujá-lo, mas torná-lo ainda mais puro. Com isso, ele ficará alegre e, logicamente, se tornará mais ativo."
+            <footer class="mt-2 text-sm font-semibold text-emerald-700">— Meishu-Sama, Alicerce do Paraíso, vol. 5</footer>
+        </blockquote>
+
+        <div class="mb-8 p-6 bg-green-50 rounded-lg border border-green-200 shadow-inner">
+            <h2 class="text-2xl font-semibold text-emerald-700 mb-4">Informações do Cliente</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="customerName" class="block text-gray-700 font-medium mb-2">Nome: <span class="text-red-500">*</span></label>
+                    <input type="text" id="customerName" class="w-full p-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200" placeholder="Seu nome completo">
+                    <p class="validation-msg" id="nameError">Por favor, informe seu nome antes de finalizar.</p>
+                </div>
+                <div>
+                    <label for="customerAddress" class="block text-gray-700 font-medium mb-2">Johrei Center:</label>
+                    <input type="text" id="customerAddress" class="w-full p-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200" placeholder="Seu Johrei Center">
+                </div>
+            </div>
+        </div>
+
+        <div id="productList" class="space-y-6"></div>
+
+        <!-- Empty cart error -->
+        <p class="validation-msg text-center mt-4" id="cartError" style="font-size:14px;">Adicione pelo menos um produto antes de finalizar.</p>
+
+        <div class="mt-10 p-6 bg-emerald-100 rounded-lg border border-emerald-300 shadow-lg flex justify-between items-center">
+            <h2 class="text-3xl font-bold text-emerald-800">Total Geral:</h2>
+            <span id="grandTotal" class="text-4xl font-extrabold text-emerald-900">R$ 0,00</span>
+        </div>
+    </div>
+
+    <!-- Sticky bottom bar -->
+    <div class="sticky-bar">
+        <div class="totals">
+            <p class="total-label">Total do pedido</p>
+            <p class="total-value" id="stickyTotal">R$ 0,00</p>
+        </div>
+        <button class="clear-btn" id="clearAllBtn">Limpar tudo</button>
+        <button class="finalize-btn" id="placeOrderBtn">
+            Finalizar Pedido
+            <span class="badge" id="itemCountBadge" style="display:none;">0</span>
+        </button>
+    </div>
+
+    <!-- Order Summary Modal -->
+    <div id="orderSummaryModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-8 shadow-xl max-w-lg w-full transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Resumo do Pedido</h3>
+            <p class="text-sm text-gray-600 mb-4">Copie o pedido abaixo e envie para a sua vendedora <b>e no WhatsApp</b>.</p>
+            <div id="summaryDetails" class="mb-6 text-gray-700 whitespace-pre-wrap text-sm bg-green-50 p-4 rounded-lg border border-green-200 max-h-80 overflow-y-auto"></div>
+            <div class="flex justify-end space-x-4">
+                <button id="closeModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-200">Fechar</button>
+                <button id="copyOrderBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">Copiar Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="copySuccessMessage" class="fixed bottom-20 right-5 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg hidden z-50">
+        ✓ Pedido copiado!
+    </div>
+
+    <script>
+        const products = [
+          { "name": "COXA NGMO 1KG", "price": 13.5, "category": "Tabela Ação Social" },
+          { "name": "COXINHA ASA NGMO 1KG", "price": 15.10, "category": "Tabela Ação Social" },
+          { "name": "SOBRECOXA NGMO 1KG", "price": 23.85, "category": "Tabela Ação Social" },
+          { "name": "FIGADO NGMO 1KG", "price": 8.60, "category": "Tabela Ação Social" },
+          { "name": "PÉ NGMO 1KG", "price": 8.5, "category": "Tabela Ação Social" },
+          { "name": "OVOS S/TRANSG CAIPIRA VERM GRANDE C/ 20 UN", "price": 25.45, "category": "Tabela Ação Social" },
+          { "name": "CARNE MOIDA DE FRANGO S/TRANSG 400G", "price": 19.92, "category": "Tabela Complementar" },
+          { "name": "FILE PEITO NGMO 600G", "price": 34.06, "category": "Tabela Complementar" },
+          { "name": "CORACAO DE FRANGO NGMO 600G", "price": 31.50, "category": "Tabela Complementar" },
+          { "name": "HAMBURGUER FRANGO NGMO 360G", "price": 27.80, "category": "Tabela Complementar" },
+          { "name": "ESPETINHO DE FILE DE COXA NGMO TEMP 400G", "price": 18.50, "category": "Tabela Complementar" },
+          { "name": "MEL ORG. BISNAGA 300G", "price": 26.90, "category": "Tabela Complementar" },
+          { "name": "EXTRATO PROPOLIS VERDE ORG 30ML", "price": 24.80, "category": "Tabela Complementar" },
+          { "name": "SPRAY MEL E PROPOLIS ORG. HORTELA 30ML", "price": 16.30, "category": "Tabela Complementar" },
+          { "name": "ARROZ AGULHINHA POLIDO ORG 1KG", "price": 23.53, "category": "Tabela Complementar" },
+          { "name": "ARROZ AGULHINHA INTEGRAL ORG 1KG", "price": 22.49, "category": "Tabela Complementar" },
+          { "name": "FEIJAO CARIOCA ORG 500G", "price": 16.12, "category": "Tabela Complementar" },
+          { "name": "FEIJAO PRETO ORG 500G", "price": 14.43, "category": "Tabela Complementar" }
+        ];
+
+        const productListDiv = document.getElementById('productList');
+        const grandTotalSpan = document.getElementById('grandTotal');
+        const stickyTotal = document.getElementById('stickyTotal');
+        const placeOrderBtn = document.getElementById('placeOrderBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const orderSummaryModal = document.getElementById('orderSummaryModal');
+        const modalContent = document.getElementById('modalContent');
+        const summaryDetailsDiv = document.getElementById('summaryDetails');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const copyOrderBtn = document.getElementById('copyOrderBtn');
+        const customerNameInput = document.getElementById('customerName');
+        const customerAddressInput = document.getElementById('customerAddress');
+        const copySuccessMessage = document.getElementById('copySuccessMessage');
+        const itemCountBadge = document.getElementById('itemCountBadge');
+        const nameError = document.getElementById('nameError');
+        const cartError = document.getElementById('cartError');
+
+        const quantities = {};
+
+        function renderProducts() {
+            productListDiv.innerHTML = '';
+            const grouped = products.reduce((acc, product) => {
+                const cat = product.category || 'Outros Produtos';
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(product);
+                return acc;
+            }, {});
+
+            for (const category in grouped) {
+                const catDiv = document.createElement('div');
+                catDiv.className = 'mb-8';
+
+                const catTitle = document.createElement('h2');
+                catTitle.className = 'text-2xl font-semibold text-emerald-700 mb-4 pb-2 border-b-2 border-emerald-300';
+                catTitle.textContent = category;
+                catDiv.appendChild(catTitle);
+
+                grouped[category].forEach((product, index) => {
+                    const pid = `p_${product.name.replace(/[^a-zA-Z0-9]/g, '_')}_${index}`;
+                    quantities[pid] = 0;
+
+                    const card = document.createElement('div');
+                    card.className = 'product-card flex flex-col md:flex-row items-center justify-between bg-white p-4 rounded-lg shadow-md mb-3 border border-green-100';
+                    card.id = `card_${pid}`;
+
+                    card.innerHTML = `
+                        <div class="flex-1 mb-3 md:mb-0">
+                            <p class="text-lg font-medium text-gray-800">${product.name}</p>
+                            <p class="text-emerald-600 font-semibold">R$ ${product.price.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="qty-btn" data-pid="${pid}" data-action="minus" aria-label="Diminuir quantidade">−</button>
+                            <span class="qty-display" id="qty_${pid}">0</span>
+                            <button class="qty-btn" data-pid="${pid}" data-action="plus" aria-label="Aumentar quantidade">+</button>
+                            <span class="text-base font-bold text-emerald-700 w-24 text-right" id="total_${pid}">R$ 0,00</span>
+                        </div>
+                    `;
+                    card.dataset.pid = pid;
+                    card.dataset.price = product.price;
+                    card.dataset.name = product.name;
+                    catDiv.appendChild(card);
+                });
+
+                productListDiv.appendChild(catDiv);
+            }
+
+            document.querySelectorAll('.qty-btn').forEach(btn => {
+                btn.addEventListener('click', handleQtyChange);
+            });
+        }
+
+        function handleQtyChange(e) {
+            const pid = e.currentTarget.dataset.pid;
+            const action = e.currentTarget.dataset.action;
+            if (action === 'plus') {
+                quantities[pid] = (quantities[pid] || 0) + 1;
+            } else {
+                quantities[pid] = Math.max(0, (quantities[pid] || 0) - 1);
+            }
+            updateCard(pid);
+            updateTotals();
+        }
+
+        function updateCard(pid) {
+            const qty = quantities[pid] || 0;
+            const card = document.getElementById(`card_${pid}`);
+            const price = parseFloat(card.dataset.price);
+            const itemTotal = qty * price;
+
+            document.getElementById(`qty_${pid}`).textContent = qty;
+            document.getElementById(`total_${pid}`).textContent = `R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
+
+            if (qty > 0) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        }
+
+        function updateTotals() {
+            let grandTotal = 0;
+            let totalItems = 0;
+
+            for (const pid in quantities) {
+                const qty = quantities[pid] || 0;
+                const card = document.getElementById(`card_${pid}`);
+                if (card) {
+                    const price = parseFloat(card.dataset.price);
+                    grandTotal += qty * price;
+                    if (qty > 0) totalItems++;
+                }
+            }
+
+            const formatted = `R$ ${grandTotal.toFixed(2).replace('.', ',')}`;
+            grandTotalSpan.textContent = formatted;
+            stickyTotal.textContent = formatted;
+
+            if (totalItems > 0) {
+                itemCountBadge.style.display = 'inline';
+                itemCountBadge.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'itens'}`;
+            } else {
+                itemCountBadge.style.display = 'none';
+            }
+        }
+
+        function clearAll() {
+            for (const pid in quantities) {
+                quantities[pid] = 0;
+                updateCard(pid);
+            }
+            updateTotals();
+        }
+
+        function validateOrder() {
+            let valid = true;
+
+            const name = customerNameInput.value.trim();
+            if (!name) {
+                customerNameInput.classList.add('field-error');
+                nameError.style.display = 'block';
+                valid = false;
+            } else {
+                customerNameInput.classList.remove('field-error');
+                nameError.style.display = 'none';
+            }
+
+            const hasItems = Object.values(quantities).some(q => q > 0);
+            if (!hasItems) {
+                cartError.style.display = 'block';
+                valid = false;
+            } else {
+                cartError.style.display = 'none';
+            }
+
+            return valid;
+        }
+
+        customerNameInput.addEventListener('input', () => {
+            if (customerNameInput.value.trim()) {
+                customerNameInput.classList.remove('field-error');
+                nameError.style.display = 'none';
+            }
+        });
+
+        function generateOrderSummary() {
+            const customerName = customerNameInput.value.trim();
+            const customerAddress = customerAddressInput.value.trim();
+            let summaryText = '';
+
+            if (customerName) summaryText += `Nome: ${customerName}\n`;
+            if (customerAddress) summaryText += `Johrei Center: ${customerAddress}\n`;
+            if (customerName || customerAddress) summaryText += '\n';
+
+            summaryText += '--- Detalhes do Pedido ---\n';
+
+            for (const pid in quantities) {
+                const qty = quantities[pid] || 0;
+                if (qty > 0) {
+                    const card = document.getElementById(`card_${pid}`);
+                    const price = parseFloat(card.dataset.price);
+                    const name = card.dataset.name;
+                    const itemTotal = qty * price;
+                    summaryText += `${name} — Qtd: ${qty} x R$ ${price.toFixed(2).replace('.', ',')} = R$ ${itemTotal.toFixed(2).replace('.', ',')}\n`;
+                }
+            }
+
+            summaryText += `\nTotal Geral: ${grandTotalSpan.textContent}\n`;
+            return summaryText;
+        }
+
+        placeOrderBtn.addEventListener('click', () => {
+            if (!validateOrder()) return;
+            summaryDetailsDiv.textContent = generateOrderSummary();
+            orderSummaryModal.classList.remove('hidden');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => orderSummaryModal.classList.add('hidden'), 300);
+        });
+
+        copyOrderBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(summaryDetailsDiv.textContent).then(() => {
+                copySuccessMessage.classList.remove('hidden');
+                setTimeout(() => copySuccessMessage.classList.add('hidden'), 2500);
+            });
+        });
+
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('Limpar todas as quantidades?')) clearAll();
         });
 
         document.addEventListener('DOMContentLoaded', renderProducts);
